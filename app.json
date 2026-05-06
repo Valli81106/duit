@@ -34,11 +34,20 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e0d9b3fd-70d7-4880-9c08-db2506e4d64c"
+      }
+    },
+    "owner": "valli127"
   }
 }

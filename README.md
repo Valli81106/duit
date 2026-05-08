@@ -49,7 +49,7 @@ _Add screenshots here_
 
 | Home                                     | Log                                    |
 | ---------------------------------------- | -------------------------------------- |
-| ![Home](assets/screenshots\homeduit.png) | ![Log](assets\screenshots\logduit.png) |
+| ![Home](assets/screenshots/homeduit.png) | ![Log](assets/screenshots/logduit.png) |
 
 ---
 

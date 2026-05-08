@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
     StyleSheet,
@@ -7,59 +7,46 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { COLORS } from "../../constants/colors";
+import { saveGoals } from "../../storage/goals";
 
-import { getCurrentMonth } from "../../utils/date";
+const PRIMARY = "#1A00CC";
 
 export default function GoalsScreen() {
   const { name } = useLocalSearchParams();
+  const [goals, setGoals] = useState(["", "", ""]);
 
-  const month = getCurrentMonth();
+  const updateGoal = (index: number, value: string) =>
+    setGoals((prev) => prev.map((g, i) => (i === index ? value : g)));
 
-  const [goal1, setGoal1] = useState("");
-  const [goal2, setGoal2] = useState("");
-  const [goal3, setGoal3] = useState("");
-
-  const handleSave = () => {
-    console.log({
-      name,
-      month,
-      goals: [goal1, goal2, goal3],
-    });
+  const handleNext = async () => {
+    await saveGoals(goals);
+    router.push("/onboarding/events" as any);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Hi {name},</Text>
-
       <Text style={styles.subtitle}>
-        Write down the 3 most important goals for {month}
+        What are 3 main goals you{"\n"}want to focus on this month
       </Text>
 
-      <TextInput
-        style={styles.input}
-        value={goal1}
-        onChangeText={setGoal1}
-        placeholder="Goal 1"
-      />
+      {goals.map((goal, i) => (
+        <View key={i} style={styles.inputRow}>
+          <Text style={styles.number}>{i + 1}</Text>
+          <TextInput
+            style={styles.input}
+            value={goal}
+            onChangeText={(val) => updateGoal(i, val)}
+            placeholderTextColor="#aaa"
+          />
+        </View>
+      ))}
 
-      <TextInput
-        style={styles.input}
-        value={goal2}
-        onChangeText={setGoal2}
-        placeholder="Goal 2"
-      />
-
-      <TextInput
-        style={styles.input}
-        value={goal3}
-        onChangeText={setGoal3}
-        placeholder="Goal 3"
-      />
-
-      <TouchableOpacity style={styles.button} onPress={handleSave}>
-        <Text>Save Goals</Text>
-      </TouchableOpacity>
+      <View style={styles.nextContainer}>
+        <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
+          <Text style={styles.nextText}>Next</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -67,32 +54,43 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
-    padding: 30,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 32,
     paddingTop: 80,
   },
-  title: {
-    color: COLORS.white,
-    fontSize: 34,
-    fontWeight: "700",
-  },
+  title: { color: "#fff", fontSize: 36, fontWeight: "700", marginBottom: 12 },
   subtitle: {
-    color: COLORS.white,
-    fontSize: 18,
-    marginTop: 20,
-    marginBottom: 30,
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 16,
+    lineHeight: 23,
+    marginBottom: 48,
   },
-  input: {
-    backgroundColor: COLORS.white,
-    borderRadius: 30,
-    padding: 16,
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: COLORS.white,
-    padding: 16,
-    borderRadius: 30,
-    marginTop: 20,
+  inputRow: {
+    flexDirection: "row",
     alignItems: "center",
+    marginBottom: 28,
+    gap: 12,
   },
+  number: { color: "#fff", fontSize: 24, fontWeight: "700", width: 24 },
+  input: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    fontSize: 14,
+  },
+  nextContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+    paddingBottom: 40,
+  },
+  nextBtn: {
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  nextText: { color: PRIMARY, fontWeight: "600", fontSize: 15 },
 });

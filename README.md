@@ -1,56 +1,74 @@
-# Welcome to your Expo app 👋
+# duit
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**duit** is a minimal daily productivity app built with React Native and Expo, designed to help you stay consistent by focusing on two things:
 
-## Get started
+- **Log your day**
+- **Manage your tasks**
 
-1. Install dependencies
+The idea is simple: improve by 1% every day.
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+### Daily Logs
 
-   ```bash
-   npx expo start
-   ```
+Capture your day with:
 
-In the output, you'll find options to open the app in a
+- Written reflections / journal entries
+- Photos and media uploads
+- Date-based log history
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Each day’s log is saved and can be revisited later through the calendar.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Daily Tasks
 
-## Get a fresh project
+Stay on track with:
 
-When you're ready, run:
+- Add and manage tasks for the day
+- Mark tasks as complete
+- Track completion progress with visual progress rings
 
-```bash
-npm run reset-project
-```
+### Goal Tracking
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Set personal goals and track progress over time.
 
-### Other setup steps
+### Calendar View
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Navigate through previous days to:
 
-## Learn more
+- View logged memories
+- Check completed tasks
+- Review consistency
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Screenshots
 
-## Join the community
+_Add screenshots here_
 
-Join our community of developers creating universal apps.
+| Home                                     | Log                                    | Profile                               |
+| ---------------------------------------- | -------------------------------------- | ------------------------------------- |
+| ![Home](assets\screenshots\homeduit.png) | ![Log](assets\screenshots\logduit.png) | ![Profile](./screenshots/profile.png) |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## Android Download
+
+Download APK:
+
+https://expo.dev/accounts/valli127/projects/duit/builds/8ebde1f2-5f0a-470d-aaac-a9d879410470
+
+### Installation Steps
+
+1. Open the build link on your Android device
+2. Click **Install** (no QR scan needed)
+3. Allow installation from unknown sources if prompted
+4. Install and open **duit**
+
+---
+
+Built with:
+
+- React Native
+- Expo
+- AsyncStorage
+- Expo Router

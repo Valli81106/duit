@@ -33,6 +33,7 @@ export default function LogScreen() {
   const dateKey = useMemo(() => getDateKey(), []);
   const [text, setText] = useState("");
   const [media, setMedia] = useState<string[]>([]);
+  const [saved, setSaved] = useState(false);
 
   const storageKey = `log-${dateKey}`;
 
@@ -41,21 +42,21 @@ export default function LogScreen() {
   }, []);
 
   const loadLog = async () => {
-    const saved = await AsyncStorage.getItem(storageKey);
-    if (!saved) return;
-    const parsed: LogItem = JSON.parse(saved);
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (!raw) return;
+    const parsed: LogItem & { saved?: boolean } = JSON.parse(raw);
     setText(parsed.text);
     setMedia(parsed.media);
+    if (parsed.saved) setSaved(true);
   };
 
-  const saveLog = async (nextText = text, nextMedia = media) => {
-    const payload: LogItem = {
-      dateKey,
-      text: nextText,
-      media: nextMedia,
-    };
+  const saveLog = async () => {
+    const payload = { dateKey, text, media, saved: true };
     await AsyncStorage.setItem(storageKey, JSON.stringify(payload));
+    setSaved(true);
   };
+
+  const handleEdit = () => setSaved(false);
 
   const pickMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -65,15 +66,57 @@ export default function LogScreen() {
     });
     if (!result.canceled) {
       const uris = result.assets.map((a) => a.uri);
-      const updated = [...media, ...uris];
-      setMedia(updated);
-      saveLog(text, updated);
+      setMedia((prev) => [...prev, ...uris]);
     }
   };
 
+  // ── READ-ONLY VIEW ──────────────────────────────────────────
+  if (saved) {
+    return (
+      <View style={styles.root}>
+        <View style={styles.headerWrap}>
+          <View style={styles.headerPill}>
+            <Text style={styles.headerText}>{formatHeader()}</Text>
+          </View>
+          <Text style={styles.headerSub}>1% better every day</Text>
+        </View>
+
+        {/* Edit button */}
+        <TouchableOpacity style={styles.editFab} onPress={handleEdit}>
+          <Text style={styles.editFabIcon}>✎</Text>
+        </TouchableOpacity>
+
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {media.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.mediaStrip}
+            >
+              {media.map((uri, i) => (
+                <Image
+                  key={i}
+                  source={{ uri }}
+                  style={[
+                    styles.mediaImage,
+                    { transform: [{ rotate: `${i % 2 === 0 ? -6 : 4}deg` }] },
+                  ]}
+                />
+              ))}
+            </ScrollView>
+          )}
+
+          <Text style={styles.readOnlyText}>
+            {text || "Nothing written yet."}
+          </Text>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── EDIT VIEW ───────────────────────────────────────────────
   return (
     <View style={styles.root}>
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerPill}>
           <Text style={styles.headerText}>{formatHeader()}</Text>
@@ -81,9 +124,9 @@ export default function LogScreen() {
         <Text style={styles.headerSub}>1% better every day</Text>
       </View>
 
-      {/* Floating action buttons */}
+      {/* FAB actions */}
       <View style={styles.fab}>
-        <TouchableOpacity style={styles.fabBtn}>
+        <TouchableOpacity style={styles.fabBtn} onPress={handleEdit}>
           <Text style={styles.fabIconPrimary}>✎</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.fabBtn} onPress={pickMedia}>
@@ -91,40 +134,43 @@ export default function LogScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Media strip */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {media.length > 0 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.mediaStrip}
           >
-            {media.map((uri, index) => (
+            {media.map((uri, i) => (
               <Image
-                key={index}
+                key={i}
                 source={{ uri }}
                 style={[
                   styles.mediaImage,
-                  { transform: [{ rotate: "-6deg" }] },
+                  { transform: [{ rotate: `${i % 2 === 0 ? -6 : 4}deg` }] },
                 ]}
               />
             ))}
           </ScrollView>
         )}
 
-        {/* Journal text input */}
         <TextInput
           multiline
           placeholder="Write your thoughts..."
           placeholderTextColor="#aaa"
           value={text}
-          onChangeText={(val) => {
-            setText(val);
-            saveLog(val, media);
-          }}
+          onChangeText={setText}
           style={styles.textInput}
         />
       </ScrollView>
+
+      {/* Save button */}
+      <TouchableOpacity style={styles.saveBtn} onPress={saveLog}>
+        <Text style={styles.saveBtnText}>Save</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -136,6 +182,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 32,
   },
+
   headerWrap: { alignItems: "center", marginBottom: 24 },
   headerPill: {
     backgroundColor: PRIMARY,
@@ -145,6 +192,7 @@ const styles = StyleSheet.create({
   },
   headerText: { color: "#fff", fontSize: 20, fontWeight: "700" },
   headerSub: { color: "#ccc", marginTop: 8, fontSize: 13 },
+
   fab: {
     position: "absolute",
     right: 16,
@@ -163,19 +211,50 @@ const styles = StyleSheet.create({
   fabBtn: { alignItems: "center", justifyContent: "center" },
   fabIconPrimary: { fontSize: 20, color: PRIMARY },
   fabIcon: { fontSize: 20, color: "#222" },
-  mediaStrip: { marginBottom: 32 },
-  mediaImage: {
-    width: 160,
-    height: 224,
-    borderRadius: 16,
-    marginRight: -20,
+
+  editFab: {
+    position: "absolute",
+    right: 16,
+    top: 80,
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    zIndex: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
   },
+  editFabIcon: { fontSize: 20, color: PRIMARY },
+
+  scrollContent: { paddingBottom: 100 },
+  mediaStrip: { marginBottom: 32 },
+  mediaImage: { width: 160, height: 224, borderRadius: 16, marginRight: -20 },
+
   textInput: {
     color: PRIMARY,
     fontSize: 22,
     lineHeight: 36,
     minHeight: 250,
     textAlignVertical: "top",
+  },
+
+  readOnlyText: {
+    color: PRIMARY,
+    fontSize: 22,
+    lineHeight: 36,
     paddingBottom: 80,
   },
+
+  saveBtn: {
+    position: "absolute",
+    bottom: 24,
+    left: 24,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 30,
+  },
+  saveBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

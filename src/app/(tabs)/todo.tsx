@@ -27,14 +27,15 @@ const formatHeader = () => {
 
 export default function TodoScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [saved, setSaved] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [newTaskLabel, setNewTaskLabel] = useState("");
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const saved = await getTasks();
-        setTasks(saved);
+        const savedTasks = await getTasks();
+        setTasks(savedTasks);
       })();
     }, []),
   );
@@ -44,17 +45,23 @@ export default function TodoScreen() {
     await saveTasks(updated);
   };
 
-  // ── Task actions ──────────────────────────────────────────────
+  const handleSave = async () => {
+    await saveTasks(tasks);
+    setSaved(true);
+  };
+
+  const handleEdit = () => setSaved(false);
+
+  // ── Task mutations ─────────────────────────────────────────
 
   const addTask = async () => {
     if (!newTaskLabel.trim()) return;
     const d = new Date();
-    const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
     const newTask: Task = {
       id: Date.now().toString(),
       label: newTaskLabel.trim(),
       done: false,
-      dateKey,
+      dateKey: `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`,
       subTasks: [],
     };
     await persist([...tasks, newTask]);
@@ -62,11 +69,8 @@ export default function TodoScreen() {
     setModalVisible(false);
   };
 
-  const toggleTask = async (taskId: string) => {
-    await persist(
-      tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)),
-    );
-  };
+  const toggleTask = async (id: string) =>
+    persist(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
 
   const addSubTask = async (taskId: string) => {
     const sub: SubTask = {
@@ -82,8 +86,8 @@ export default function TodoScreen() {
     );
   };
 
-  const toggleSubTask = async (taskId: string, subId: string) => {
-    await persist(
+  const toggleSubTask = async (taskId: string, subId: string) =>
+    persist(
       tasks.map((t) =>
         t.id === taskId
           ? {
@@ -95,14 +99,13 @@ export default function TodoScreen() {
           : t,
       ),
     );
-  };
 
   const updateSubTaskLabel = async (
     taskId: string,
     subId: string,
     label: string,
-  ) => {
-    await persist(
+  ) =>
+    persist(
       tasks.map((t) =>
         t.id === taskId
           ? {
@@ -114,10 +117,9 @@ export default function TodoScreen() {
           : t,
       ),
     );
-  };
 
   const addSubSubTask = async (taskId: string, subId: string) => {
-    const sub: SubSubTask = {
+    const ss: SubSubTask = {
       id: Date.now().toString(),
       label: "sub-subtask",
       done: false,
@@ -128,7 +130,7 @@ export default function TodoScreen() {
           ? {
               ...t,
               subTasks: t.subTasks.map((s) =>
-                s.id === subId ? { ...s, subTasks: [...s.subTasks, sub] } : s,
+                s.id === subId ? { ...s, subTasks: [...s.subTasks, ss] } : s,
               ),
             }
           : t,
@@ -140,8 +142,8 @@ export default function TodoScreen() {
     taskId: string,
     subId: string,
     ssId: string,
-  ) => {
-    await persist(
+  ) =>
+    persist(
       tasks.map((t) =>
         t.id === taskId
           ? {
@@ -160,15 +162,14 @@ export default function TodoScreen() {
           : t,
       ),
     );
-  };
 
-  const updateSubSubTaskLabel = async (
+  const updateSubSubLabel = async (
     taskId: string,
     subId: string,
     ssId: string,
     label: string,
-  ) => {
-    await persist(
+  ) =>
+    persist(
       tasks.map((t) =>
         t.id === taskId
           ? {
@@ -187,18 +188,107 @@ export default function TodoScreen() {
           : t,
       ),
     );
-  };
 
+  // ── READ-ONLY VIEW ──────────────────────────────────────────
+  if (saved) {
+    return (
+      <View style={styles.root}>
+        <View style={styles.headerWrap}>
+          <View style={styles.headerPill}>
+            <Text style={styles.headerText}>{formatHeader()}</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {tasks.map((task) => (
+            <View key={task.id} style={styles.taskBlock}>
+              <TouchableOpacity
+                style={styles.taskRow}
+                onPress={() => toggleTask(task.id)}
+              >
+                <View style={[styles.circle, task.done && styles.circleDone]}>
+                  {task.done && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text
+                  style={[styles.taskLabel, task.done && styles.taskLabelDone]}
+                >
+                  {task.label}
+                </Text>
+              </TouchableOpacity>
+
+              {task.subTasks.map((sub) => (
+                <View key={sub.id} style={styles.subBlock}>
+                  <TouchableOpacity
+                    style={styles.subTaskRow}
+                    onPress={() => toggleSubTask(task.id, sub.id)}
+                  >
+                    <View
+                      style={[
+                        styles.subSquare,
+                        sub.done && styles.subSquareDone,
+                      ]}
+                    >
+                      {sub.done && <Text style={styles.subCheckmark}>✓</Text>}
+                    </View>
+                    <Text
+                      style={[styles.subLabel, sub.done && styles.subLabelDone]}
+                    >
+                      {sub.label}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {sub.subTasks.map((ss) => (
+                    <TouchableOpacity
+                      key={ss.id}
+                      style={styles.subSubRow}
+                      onPress={() => toggleSubSubTask(task.id, sub.id, ss.id)}
+                    >
+                      <View
+                        style={[
+                          styles.subSubSquare,
+                          ss.done && styles.subSquareDone,
+                        ]}
+                      >
+                        {ss.done && <Text style={styles.subCheckmark}>✓</Text>}
+                      </View>
+                      <Text
+                        style={[
+                          styles.subSubLabel,
+                          ss.done && styles.subLabelDone,
+                        ]}
+                      >
+                        {ss.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Edit button */}
+        <TouchableOpacity style={styles.saveBtn} onPress={handleEdit}>
+          <Text style={styles.saveBtnText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── EDIT VIEW ───────────────────────────────────────────────
   return (
     <View style={styles.root}>
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerPill}>
           <Text style={styles.headerText}>{formatHeader()}</Text>
         </View>
       </View>
 
-      {/* Floating add button */}
+      {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setModalVisible(true)}
@@ -213,7 +303,6 @@ export default function TodoScreen() {
       >
         {tasks.map((task) => (
           <View key={task.id} style={styles.taskBlock}>
-            {/* Main task row */}
             <View style={styles.taskRow}>
               <TouchableOpacity
                 style={[styles.circle, task.done && styles.circleDone]}
@@ -221,13 +310,11 @@ export default function TodoScreen() {
               >
                 {task.done && <Text style={styles.checkmark}>✓</Text>}
               </TouchableOpacity>
-
               <Text
                 style={[styles.taskLabel, task.done && styles.taskLabelDone]}
               >
                 {task.label}
               </Text>
-
               <TouchableOpacity
                 style={styles.plusBtn}
                 onPress={() => addSubTask(task.id)}
@@ -236,7 +323,6 @@ export default function TodoScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Subtasks */}
             {task.subTasks.map((sub) => (
               <View key={sub.id} style={styles.subBlock}>
                 <View style={styles.subTaskRow}>
@@ -246,7 +332,6 @@ export default function TodoScreen() {
                   >
                     {sub.done && <Text style={styles.subCheckmark}>✓</Text>}
                   </TouchableOpacity>
-
                   <TextInput
                     style={[styles.subLabel, sub.done && styles.subLabelDone]}
                     value={sub.label}
@@ -254,7 +339,6 @@ export default function TodoScreen() {
                       updateSubTaskLabel(task.id, sub.id, val)
                     }
                   />
-
                   <TouchableOpacity
                     style={styles.plusBtn}
                     onPress={() => addSubSubTask(task.id, sub.id)}
@@ -263,7 +347,6 @@ export default function TodoScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Sub-subtasks */}
                 {sub.subTasks.map((ss) => (
                   <View key={ss.id} style={styles.subSubRow}>
                     <TouchableOpacity
@@ -275,7 +358,6 @@ export default function TodoScreen() {
                     >
                       {ss.done && <Text style={styles.subCheckmark}>✓</Text>}
                     </TouchableOpacity>
-
                     <TextInput
                       style={[
                         styles.subSubLabel,
@@ -283,7 +365,7 @@ export default function TodoScreen() {
                       ]}
                       value={ss.label}
                       onChangeText={(val) =>
-                        updateSubSubTaskLabel(task.id, sub.id, ss.id, val)
+                        updateSubSubLabel(task.id, sub.id, ss.id, val)
                       }
                     />
                   </View>
@@ -293,7 +375,6 @@ export default function TodoScreen() {
           </View>
         ))}
 
-        {/* Placeholder if no tasks */}
         {tasks.length === 0 && (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyText}>
@@ -302,6 +383,11 @@ export default function TodoScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Save button */}
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+        <Text style={styles.saveBtnText}>Save</Text>
+      </TouchableOpacity>
 
       {/* Add Task Modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
@@ -368,9 +454,8 @@ const styles = StyleSheet.create({
   fabText: { fontSize: 24, color: "#222", lineHeight: 28 },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 80 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 100 },
 
-  // Main task
   taskBlock: { marginBottom: 20 },
   taskRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   circle: {
@@ -389,7 +474,6 @@ const styles = StyleSheet.create({
   plusBtn: { paddingHorizontal: 6 },
   plusText: { fontSize: 18, color: "#aaa", fontWeight: "300" },
 
-  // Subtask
   subBlock: { marginLeft: 32, marginTop: 8 },
   subTaskRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   subSquare: {
@@ -406,7 +490,6 @@ const styles = StyleSheet.create({
   subLabel: { flex: 1, fontSize: 13, color: "#555", paddingVertical: 2 },
   subLabelDone: { color: "#bbb", textDecorationLine: "line-through" },
 
-  // Sub-subtask
   subSubRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -425,7 +508,6 @@ const styles = StyleSheet.create({
   },
   subSubLabel: { flex: 1, fontSize: 12, color: "#777", paddingVertical: 2 },
 
-  // Empty
   emptyWrap: { flex: 1, alignItems: "center", paddingTop: 80 },
   emptyText: {
     color: "#ccc",
@@ -434,7 +516,17 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Modal
+  saveBtn: {
+    position: "absolute",
+    bottom: 24,
+    left: 24,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 30,
+  },
+  saveBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
   modalBg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",

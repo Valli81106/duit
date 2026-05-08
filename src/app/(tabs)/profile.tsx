@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
 
   cellText: {
     color: "#000000",
-    fontFamily: "Poppins_700Bold",
+    fontFamily: "Poppins_900Bold",
     fontSize: 12,
   },
 

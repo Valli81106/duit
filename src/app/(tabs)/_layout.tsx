@@ -9,9 +9,28 @@ export default function TabsLayout() {
         headerShown: false,
 
         tabBarStyle: {
-          height: 70,
+          position: "absolute",
+          left: 16,
+          right: 16,
+          bottom: 18, // space from bottom
+          height: 65,
+
+          borderRadius: 22, // rounded corners
           paddingTop: 8,
           paddingBottom: 8,
+
+          backgroundColor: "#fff",
+
+          borderTopWidth: 0, // removes default top border
+
+          elevation: 8, // android shadow
+          shadowColor: "#000", // ios shadow
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
+          shadowOffset: {
+            width: 0,
+            height: 4,
+          },
         },
 
         tabBarActiveTintColor: "#1A00CC",

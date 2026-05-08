@@ -3,6 +3,8 @@ import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     Image,
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,6 +19,7 @@ type LogItem = {
   dateKey: string;
   text: string;
   media: string[];
+  saved?: boolean;
 };
 
 const getDateKey = () => {
@@ -26,51 +29,82 @@ const getDateKey = () => {
 
 const formatHeader = () => {
   const d = new Date();
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+  });
 };
 
 export default function LogScreen() {
   const dateKey = useMemo(() => getDateKey(), []);
+  const storageKey = `log-${dateKey}`;
+
   const [text, setText] = useState("");
   const [media, setMedia] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
-
-  const storageKey = `log-${dateKey}`;
 
   useEffect(() => {
     loadLog();
   }, []);
 
   const loadLog = async () => {
-    const raw = await AsyncStorage.getItem(storageKey);
-    if (!raw) return;
-    const parsed: LogItem & { saved?: boolean } = JSON.parse(raw);
-    setText(parsed.text);
-    setMedia(parsed.media);
-    if (parsed.saved) setSaved(true);
+    try {
+      const raw = await AsyncStorage.getItem(storageKey);
+
+      if (!raw) {
+        setText("");
+        setMedia([]);
+        setSaved(false);
+        return;
+      }
+
+      const parsed: LogItem = JSON.parse(raw);
+
+      setText(parsed.text ?? "");
+      setMedia(parsed.media ?? []);
+      setSaved(parsed.saved ?? false);
+    } catch (error) {
+      console.log("Load log error:", error);
+    }
   };
 
   const saveLog = async () => {
-    const payload = { dateKey, text, media, saved: true };
-    await AsyncStorage.setItem(storageKey, JSON.stringify(payload));
-    setSaved(true);
+    try {
+      const payload: LogItem = {
+        dateKey,
+        text,
+        media,
+        saved: true,
+      };
+
+      await AsyncStorage.setItem(storageKey, JSON.stringify(payload));
+      setSaved(true);
+    } catch (error) {
+      console.log("Save log error:", error);
+    }
   };
 
-  const handleEdit = () => setSaved(false);
+  const handleEdit = () => {
+    setSaved(false);
+  };
 
   const pickMedia = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) return;
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsMultipleSelection: true,
       quality: 1,
     });
+
     if (!result.canceled) {
-      const uris = result.assets.map((a) => a.uri);
+      const uris = result.assets.map((asset) => asset.uri);
       setMedia((prev) => [...prev, ...uris]);
     }
   };
 
-  // ── READ-ONLY VIEW ──────────────────────────────────────────
   if (saved) {
     return (
       <View style={styles.root}>
@@ -78,15 +112,16 @@ export default function LogScreen() {
           <View style={styles.headerPill}>
             <Text style={styles.headerText}>{formatHeader()}</Text>
           </View>
-          <Text style={styles.headerSub}>1% better every day</Text>
         </View>
 
-        {/* Edit button */}
         <TouchableOpacity style={styles.editFab} onPress={handleEdit}>
           <Text style={styles.editFabIcon}>✎</Text>
         </TouchableOpacity>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {media.length > 0 && (
             <ScrollView
               horizontal
@@ -95,11 +130,17 @@ export default function LogScreen() {
             >
               {media.map((uri, i) => (
                 <Image
-                  key={i}
+                  key={`${uri}-${i}`}
                   source={{ uri }}
                   style={[
                     styles.mediaImage,
-                    { transform: [{ rotate: `${i % 2 === 0 ? -6 : 4}deg` }] },
+                    {
+                      transform: [
+                        {
+                          rotate: `${i % 2 === 0 ? -6 : 4}deg`,
+                        },
+                      ],
+                    },
                   ]}
                 />
               ))}
@@ -114,68 +155,79 @@ export default function LogScreen() {
     );
   }
 
-  // ── EDIT VIEW ───────────────────────────────────────────────
   return (
-    <View style={styles.root}>
-      <View style={styles.headerWrap}>
-        <View style={styles.headerPill}>
-          <Text style={styles.headerText}>{formatHeader()}</Text>
+    <KeyboardAvoidingView
+      style={styles.keyboardRoot}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={20}
+    >
+      <View style={styles.root}>
+        <View style={styles.headerWrap}>
+          <View style={styles.headerPill}>
+            <Text style={styles.headerText}>{formatHeader()}</Text>
+          </View>
         </View>
-        <Text style={styles.headerSub}>1% better every day</Text>
-      </View>
 
-      {/* FAB actions */}
-      <View style={styles.fab}>
-        <TouchableOpacity style={styles.fabBtn} onPress={handleEdit}>
-          <Text style={styles.fabIconPrimary}>✎</Text>
+        <View style={styles.fab}>
+          <TouchableOpacity style={styles.fabBtn} onPress={pickMedia}>
+            <Text style={styles.fabIcon}>🖼</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {media.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.mediaStrip}
+            >
+              {media.map((uri, i) => (
+                <Image
+                  key={`${uri}-${i}`}
+                  source={{ uri }}
+                  style={[
+                    styles.mediaImage,
+                    {
+                      transform: [
+                        {
+                          rotate: `${i % 2 === 0 ? -6 : 4}deg`,
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              ))}
+            </ScrollView>
+          )}
+
+          <TextInput
+            multiline
+            scrollEnabled
+            value={text}
+            onChangeText={setText}
+            placeholder="Write your thoughts..."
+            placeholderTextColor="#aaa"
+            style={styles.textInput}
+          />
+        </ScrollView>
+
+        <TouchableOpacity style={styles.saveBtn} onPress={saveLog}>
+          <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.fabBtn} onPress={pickMedia}>
-          <Text style={styles.fabIcon}>⎑</Text>
-        </TouchableOpacity>
       </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {media.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.mediaStrip}
-          >
-            {media.map((uri, i) => (
-              <Image
-                key={i}
-                source={{ uri }}
-                style={[
-                  styles.mediaImage,
-                  { transform: [{ rotate: `${i % 2 === 0 ? -6 : 4}deg` }] },
-                ]}
-              />
-            ))}
-          </ScrollView>
-        )}
-
-        <TextInput
-          multiline
-          placeholder="Write your thoughts..."
-          placeholderTextColor="#aaa"
-          value={text}
-          onChangeText={setText}
-          style={styles.textInput}
-        />
-      </ScrollView>
-
-      {/* Save button */}
-      <TouchableOpacity style={styles.saveBtn} onPress={saveLog}>
-        <Text style={styles.saveBtnText}>Save</Text>
-      </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardRoot: {
+    flex: 1,
+  },
+
   root: {
     flex: 1,
     backgroundColor: "#F6F6F6",
@@ -183,68 +235,93 @@ const styles = StyleSheet.create({
     paddingTop: 32,
   },
 
-  headerWrap: { alignItems: "center", marginBottom: 24 },
+  headerWrap: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+
   headerPill: {
     backgroundColor: PRIMARY,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 30,
   },
-  headerText: { color: "#fff", fontSize: 20, fontWeight: "700" },
-  headerSub: { color: "#ccc", marginTop: 8, fontSize: 13 },
+
+  headerText: {
+    color: "#fff",
+    fontSize: 20,
+    fontFamily: "Poppins_700Bold",
+  },
 
   fab: {
     position: "absolute",
     right: 16,
-    top: 80,
+    top: 90,
     backgroundColor: "#fff",
     borderRadius: 30,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    gap: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     zIndex: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
     elevation: 4,
   },
-  fabBtn: { alignItems: "center", justifyContent: "center" },
-  fabIconPrimary: { fontSize: 20, color: PRIMARY },
-  fabIcon: { fontSize: 20, color: "#222" },
+
+  fabBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  fabIcon: {
+    fontSize: 22,
+  },
 
   editFab: {
     position: "absolute",
     right: 16,
-    top: 80,
+    top: 90,
     backgroundColor: "#fff",
     borderRadius: 30,
     paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
     zIndex: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
     elevation: 4,
   },
-  editFabIcon: { fontSize: 20, color: PRIMARY },
 
-  scrollContent: { paddingBottom: 100 },
-  mediaStrip: { marginBottom: 32 },
-  mediaImage: { width: 160, height: 224, borderRadius: 16, marginRight: -20 },
+  editFabIcon: {
+    fontSize: 20,
+    color: PRIMARY,
+  },
+
+  scrollContent: {
+    paddingBottom: 140,
+  },
+
+  mediaStrip: {
+    marginBottom: 32,
+  },
+
+  mediaImage: {
+    width: 160,
+    height: 224,
+    borderRadius: 16,
+    marginRight: -20,
+  },
 
   textInput: {
     color: PRIMARY,
     fontSize: 22,
     lineHeight: 36,
-    minHeight: 250,
+    minHeight: 500,
     textAlignVertical: "top",
+    paddingBottom: 200,
+    fontFamily: "Poppins_400Regular",
   },
 
   readOnlyText: {
     color: PRIMARY,
     fontSize: 22,
     lineHeight: 36,
-    paddingBottom: 80,
+    paddingBottom: 100,
+    fontFamily: "Poppins_400Regular",
   },
 
   saveBtn: {
@@ -253,8 +330,13 @@ const styles = StyleSheet.create({
     left: 24,
     backgroundColor: PRIMARY,
     paddingHorizontal: 32,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 30,
   },
-  saveBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  saveBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontFamily: "Poppins_700Bold",
+  },
 });

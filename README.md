@@ -7,6 +7,8 @@
 
 The idea is simple: improve by 1% every day.
 
+- This is only v1.0.0 , many developments and updates are yet to come. This was majorly made for my own use.
+
 ## Features
 
 ### Daily Logs
@@ -45,9 +47,9 @@ Navigate through previous days to:
 
 _Add screenshots here_
 
-| Home                                     | Log                                    | Profile                               |
-| ---------------------------------------- | -------------------------------------- | ------------------------------------- |
-| ![Home](assets\screenshots\homeduit.png) | ![Log](assets\screenshots\logduit.png) | ![Profile](./screenshots/profile.png) |
+| Home                                     | Log                                    |
+| ---------------------------------------- | -------------------------------------- |
+| ![Home](assets\screenshots\homeduit.png) | ![Log](assets\screenshots\logduit.png) |
 
 ---
 
